@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d0d0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rotina">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Rotina — Alex</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0d0d0d;
+    --surface:#1a1a19;
+    --surface-2:#222220;
+    --surface-3:#26261f;
+    --text-primary:#ffffff;
+    --text-secondary:#c3c2b7;
+    --text-muted:#898781;
+    --border:rgba(255,255,255,0.10);
+    --gridline:#2c2c2a;
+    --accent:#22c55e;
+    --accent-bright:#4ade80;
+    --ramp1:#1c7a3e;
+    --ramp2:#16a34a;
+    --ramp3:#22c55e;
+    --ramp4:#4ade80;
+    --ramp5:#86efac;
+    --good:#0ca30c;
+    --warning:#fab219;
+    --critical:#d03b3b;
+    color-scheme: dark;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--bg);
+    color:var(--text-primary);
+    font-family:-apple-system,"Segoe UI",system-ui,sans-serif;
+    padding-bottom:env(safe-area-inset-bottom);
+    overscroll-behavior-y:none;
+  }
+  #app{max-width:520px;margin:0 auto;padding:16px 16px 40px;}
+
+  header.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  header.topbar h1{font-size:20px;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  .streak{display:flex;align-items:center;gap:5px;background:var(--surface);border:1px solid var(--border);
+    border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--accent-bright);}
+
+  .datebar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);
+    border:1px solid var(--border);border-radius:14px;padding:8px 10px;margin-bottom:14px;}
+  .datebar button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-primary);
+    width:34px;height:34px;border-radius:10px;font-size:16px;}
+  .datebar button:disabled{opacity:.35;}
+  .datebar .datelabel{font-size:14px;font-weight:600;text-align:center;flex:1;}
+  .datebar .datelabel small{display:block;font-weight:400;color:var(--text-muted);font-size:11px;margin-top:1px;}
+
+  .tabs{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:3px;margin-bottom:16px;}
+  .tabs button{flex:1;border:none;background:transparent;color:var(--text-secondary);padding:9px 0;border-radius:9px;font-size:13.5px;font-weight:600;}
+  .tabs button.active{background:var(--surface-3);color:var(--text-primary);}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 14px 12px;margin-bottom:10px;}
+  .card-top{display:flex;align-items:center;gap:10px;}
+  .habit-icon{font-size:20px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;
+    background:var(--surface-2);border-radius:9px;flex-shrink:0;}
+  .habit-info{flex:1;min-width:0;}
+  .habit-info .name{font-size:14.5px;font-weight:600;}
+  .habit-info .goal{font-size:12px;color:var(--text-muted);margin-top:1px;}
+  .check{width:26px;height:26px;border-radius:8px;border:1.5px solid var(--border);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--surface-2);font-size:15px;color:transparent;}
+  .check.done{background:var(--accent);border-color:var(--accent);color:#0d0d0d;font-weight:700;}
+
+  .progress-row{display:flex;align-items:center;gap:10px;margin-top:11px;}
+  .bar-track{flex:1;height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden;}
+  .bar-fill{height:100%;border-radius:99px;background:var(--ramp3);transition:width .25s ease;}
+  .bar-fill.limit-ok{background:var(--good);}
+  .bar-fill.limit-over{background:var(--critical);}
+  .value-label{font-size:12px;color:var(--text-secondary);min-width:74px;text-align:right;font-variant-numeric:tabular-nums;}
+
+  .stepper{display:flex;align-items:center;gap:8px;margin-top:9px;}
+  .stepper button{width:32px;height:32px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface-2);color:var(--text-primary);font-size:17px;font-weight:600;}
+  .stepper button:active{background:var(--surface-3);}
+  .stepper .amount{flex:1;text-align:center;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;}
+
+  .chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:999px;margin-top:9px;}
+  .chip.ok{background:rgba(12,163,12,0.16);color:var(--good);}
+  .chip.over{background:rgba(208,59,59,0.16);color:var(--critical);}
+  .chip .dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  textarea.note{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    color:var(--text-primary);padding:12px;font-size:13.5px;font-family:inherit;resize:vertical;min-height:56px;margin-top:4px;}
+  textarea.note::placeholder{color:var(--text-muted);}
+  .section-label{font-size:12px;color:var(--text-muted);margin:18px 2px 8px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
+
+  .hero{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;text-align:center;}
+  .hero .num{font-size:48px;font-weight:700;line-height:1;color:var(--accent-bright);}
+  .hero .cap{font-size:13px;color:var(--text-secondary);margin-top:6px;}
+
+  .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 14px;margin-bottom:14px;}
+  .chart-card h3{font-size:13px;margin:0 0 14px;color:var(--text-secondary);font-weight:600;}
+  .barchart{display:flex;align-items:flex-end;gap:8px;height:120px;}
+  .barcol{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;}
+  .barcol .capval{font-size:10.5px;color:var(--text-muted);margin-bottom:4px;font-variant-numeric:tabular-nums;}
+  .barcol .col{width:100%;max-width:24px;border-radius:4px 4px 2px 2px;background:var(--ramp3);min-height:3px;}
+  .barcol .col.today{background:var(--accent-bright);}
+  .barcol .daylabel{font-size:10.5px;color:var(--text-muted);margin-top:6px;}
+  .barcol .daylabel.today{color:var(--text-primary);font-weight:700;}
+
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .stat-tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 13px;}
+  .stat-tile .label{font-size:11.5px;color:var(--text-muted);margin-bottom:6px;}
+  .stat-tile .val{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .meter-track{height:6px;border-radius:99px;background:var(--surface-2);margin-top:8px;overflow:hidden;}
+  .meter-fill{height:100%;border-radius:99px;background:var(--ramp3);}
+
+  details.tablewrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 14px;margin-bottom:20px;}
+  details.tablewrap summary{font-size:12.5px;color:var(--text-secondary);font-weight:600;cursor:pointer;padding:4px 0;}
+  table.datatable{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;}
+  table.datatable th, table.datatable td{text-align:left;padding:5px 4px;border-bottom:1px solid var(--gridline);color:var(--text-secondary);font-variant-numeric:tabular-nums;}
+  table.datatable th{color:var(--text-muted);font-weight:600;}
+
+  .heatmap-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .heatmap-head .monthlabel{font-size:13px;font-weight:600;}
+  .heatmap-head button{background:var(--surface-2);border:1px solid var(--border);color:var(--text-primary);
+    width:28px;height:28px;border-radius:8px;font-size:14px;}
+  .heat-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+  .heat-dow{font-size:9.5px;color:var(--text-muted);text-align:center;}
+  .heat-cell{aspect-ratio:1;border-radius:6px;background:var(--surface-2);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(0,0,0,0.55);font-weight:700;}
+  .heat-cell.empty{background:transparent;border-color:transparent;}
+  .heat-cell.future{opacity:.35;}
+  .heat-legend{display:flex;align-items:center;gap:5px;margin-top:12px;justify-content:flex-end;font-size:10px;color:var(--text-muted);}
+  .heat-legend .sw{width:11px;height:11px;border-radius:3px;}
+
+  .settings-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px;margin-bottom:10px;}
+  .settings-row{display:flex;align-items:center;gap:10px;}
+  .settings-row .habit-info{flex:1;}
+  .settings-row input[type=number]{width:74px;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:9px;color:var(--text-primary);padding:8px;font-size:14px;text-align:center;}
+  .unit-toggle{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:2px;margin-top:10px;}
+  .unit-toggle button{flex:1;border:none;background:transparent;color:var(--text-secondary);padding:7px 0;border-radius:7px;font-size:12.5px;font-weight:600;}
+  .unit-toggle button.active{background:var(--surface-3);color:var(--text-primary);}
+  .settings-hint{font-size:11px;color:var(--text-muted);margin-top:8px;line-height:1.4;}
+
+  .footer-note{text-align:center;color:var(--text-muted);font-size:11px;margin-top:22px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="topbar">
+    <h1>Rotina</h1>
+    <div class="streak" id="streakBadge">🔥 0 dias</div>
+  </header>
+
+  <div class="datebar">
+    <button id="prevDay" aria-label="Dia anterior">‹</button>
+    <div class="datelabel" id="dateLabel">Hoje<small id="dateSub"></small></div>
+    <button id="nextDay" aria-label="Próximo dia">›</button>
+  </div>
+
+  <div class="tabs">
+    <button id="tabHojeBtn" class="active">Hoje</button>
+    <button id="tabEvoBtn">Evolução</button>
+    <button id="tabAjustesBtn">Ajustes</button>
+  </div>
+
+  <div id="viewHoje" class="view active">
+    <div id="habitCards"></div>
+    <div class="section-label">Notas do dia</div>
+    <textarea class="note" id="noteField" placeholder="Como foi o dia? (opcional)"></textarea>
+  </div>
+
+  <div id="viewEvo" class="view">
+    <div class="hero">
+      <div class="num" id="heroNum">0/7</div>
+      <div class="cap">dias com todas as metas batidas nos últimos 7 dias</div>
+    </div>
+
+    <div class="chart-card">
+      <h3>% de metas batidas por dia</h3>
+      <div class="barchart" id="weekChart"></div>
+    </div>
+
+    <div class="stat-grid" id="evoStatGrid"></div>
+
+    <div class="chart-card">
+      <div class="heatmap-head">
+        <button id="prevMonth">‹</button>
+        <div class="monthlabel" id="monthLabel"></div>
+        <button id="nextMonth">›</button>
+      </div>
+      <div class="heat-grid" id="heatDow"></div>
+      <div class="heat-grid" id="heatGrid" style="margin-top:5px;"></div>
+      <div class="heat-legend">
+        <span>menos</span>
+        <span class="sw" style="background:var(--surface-2)"></span>
+        <span class="sw" style="background:var(--ramp1)"></span>
+        <span class="sw" style="background:var(--ramp2)"></span>
+        <span class="sw" style="background:var(--ramp3)"></span>
+        <span class="sw" style="background:var(--ramp4)"></span>
+        <span class="sw" style="background:var(--ramp5)"></span>
+        <span>mais</span>
+      </div>
+    </div>
+
+    <div class="section-label">Médias da semana</div>
+    <div class="stat-grid" id="statGrid"></div>
+
+    <details class="tablewrap">
+      <summary>Ver como tabela</summary>
+      <table class="datatable" id="weekTable">
+        <thead><tr><th>Dia</th><th>Água</th><th>Estudo</th><th>Trabalho</th><th>Exercício</th><th>Redes</th><th>%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </details>
+  </div>
+
+  <div id="viewAjustes" class="view">
+    <div class="section-label">Metas e unidades</div>
+    <div id="settingsCards"></div>
+    <div class="settings-hint">Se você mudar meta ou unidade, os dias já registrados mantêm o número que você digitou na época — só a comparação com a meta atual muda.</div>
+  </div>
+
+  <div class="footer-note">Dados salvos neste aparelho (banco local no navegador).</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------------- local database (IndexedDB) ----------------
+  var DB_NAME = "rotinaDB";
+  var STORE = "kv";
+  var LEGACY_LS_KEY = "rotina_alex_v1";
+  var dbPromise = null;
+
+  function openDB(){
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function(resolve, reject){
+      if (!("indexedDB" in window)) { reject(new Error("no-idb")); return; }
+      var req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = function(){
+        var db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, {keyPath:"id"});
+      };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+    return dbPromise;
+  }
+  function idbGet(id){
+    return openDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, "readonly");
+        var r = tx.objectStore(STORE).get(id);
+        r.onsuccess = function(){ resolve(r.result ? r.result.value : undefined); };
+        r.onerror = function(){ reject(r.error); };
+      });
+    });
+  }
+  function idbSet(id, value){
+    return openDB().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction(STORE, "readwrite");
+        tx.objectStore(STORE).put({id:id, value:value});
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+
+  // in-memory mirrors, source of truth once loaded
+  var daysData = {};
+  var settings = null;
+
+  function defaultSettings(){
+    return {
+      agua:      {goal:8,  unit:"copos"},
+      estudo:    {goal:30},
+      trabalho:  {goal:4},
+      exercicio: {goal:30},
+      redes:     {limite:60}
+    };
+  }
+  function defaultDayObj(){
+    return {agua:0, estudo:0, trabalho:0, exercicio:0, redes:0, note:""};
+  }
+
+  var HABITS_STATIC = [
+    {key:"agua",      label:"Água",             icon:"💧", type:"counter"},
+    {key:"estudo",    label:"Estudo / Leitura", icon:"📚", type:"counter", unit:"min", step:5},
+    {key:"trabalho",  label:"Trabalho focado",  icon:"🎯", type:"counter", unit:"h",   step:0.5},
+    {key:"exercicio", label:"Exercício",        icon:"🏃", type:"counter", unit:"min", step:5},
+    {key:"redes",     label:"Redes sociais",    icon:"📱", type:"limit",   unit:"min", step:5}
+  ];
+
+  function buildHabits(){
+    return HABITS_STATIC.map(function(h){
+      var s = settings[h.key] || {};
+      var out = Object.assign({}, h);
+      if (h.key === "agua"){
+        out.unit = s.unit || "copos";
+        out.step = out.unit === "ml" ? 50 : 1;
+        out.goal = (typeof s.goal === "number") ? s.goal : (out.unit === "ml" ? 2000 : 8);
+      } else if (h.type === "limit"){
+        out.limite = (typeof s.limite === "number") ? s.limite : 60;
+      } else {
+        out.goal = (typeof s.goal === "number") ? s.goal : h.step * 6;
+      }
+      return out;
+    });
+  }
+
+  function persistDays(){ return idbSet("days", daysData); }
+  function persistSettings(){ return idbSet("settings", settings); }
+
+  function isoDate(d){
+    var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+day;
+  }
+  function todayDate(){ var d=new Date(); d.setHours(0,0,0,0); return d; }
+
+  var TODAY = todayDate();
+  var currentDate = todayDate();
+  var calMonth = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
+
+  // read-only accessor: never creates a stored record
+  function peekDay(iso){ return daysData[iso] || defaultDayObj(); }
+  var hasEntry = function(iso){ return !!daysData[iso]; };
+  // mutating accessor: used only when the user actually edits something
+  function editDay(iso){
+    if (!daysData[iso]) daysData[iso] = defaultDayObj();
+    return daysData[iso];
+  }
+
+  function isDone(habit, value){
+    if (habit.type === "limit") return value <= habit.limite && value > 0;
+    return value >= habit.goal;
+  }
+  function fullyDone(habits, iso){
+    if (!hasEntry(iso)) return false;
+    var day = peekDay(iso);
+    return habits.every(function(h){ return isDone(h, day[h.key]); });
+  }
+  function pctDone(habits, iso){
+    var day = peekDay(iso);
+    var n = 0;
+    habits.forEach(function(h){ if (isDone(h, day[h.key])) n++; });
+    return Math.round((n / habits.length) * 100);
+  }
+
+  function computeStreak(habits){
+    var streak = 0;
+    var d = new Date(TODAY);
+    while (true){
+      var iso = isoDate(d);
+      if (hasEntry(iso) && fullyDone(habits, iso)){ streak++; d.setDate(d.getDate()-1); }
+      else break;
+    }
+    return streak;
+  }
+  function computeBestStreak(habits){
+    var dates = Object.keys(daysData).filter(function(iso){ return fullyDone(habits, iso); }).sort();
+    if (!dates.length) return 0;
+    var best = 1, cur = 1;
+    for (var i=1;i<dates.length;i++){
+      var diff = Math.round((new Date(dates[i]) - new Date(dates[i-1])) / 86400000);
+      cur = diff === 1 ? cur+1 : 1;
+      if (cur > best) best = cur;
+    }
+    return best;
+  }
+
+  var WEEKDAYS = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+  var MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+  var RAMP_VARS = ["var(--ramp1)","var(--ramp2)","var(--ramp3)","var(--ramp4)","var(--ramp5)"];
+
+  function fmtValue(h, v){
+    if (h.unit === "h") return (Math.round(v*10)/10) + "h";
+    return v + " " + (h.unit || "");
+  }
+
+  // ---------------- elements ----------------
+  var habitCardsEl = document.getElementById("habitCards");
+  var noteField = document.getElementById("noteField");
+  var dateLabelEl = document.getElementById("dateLabel");
+  var dateSubEl = document.getElementById("dateSub");
+  var streakBadge = document.getElementById("streakBadge");
+
+  function renderDateBar(){
+    var iso = isoDate(currentDate);
+    var isToday = iso === isoDate(TODAY);
+    dateLabelEl.firstChild.textContent = isToday ? "Hoje" : (currentDate.getDate()+" de "+MONTHS[currentDate.getMonth()].slice(0,3));
+    dateSubEl.textContent = WEEKDAYS[currentDate.getDay()];
+    document.getElementById("nextDay").disabled = isToday;
+  }
+
+  function renderHabitCards(){
+    var habits = buildHabits();
+    var iso = isoDate(currentDate);
+    var day = peekDay(iso);
+    habitCardsEl.innerHTML = "";
+    habits.forEach(function(h){
+      var val = day[h.key];
+      var done = isDone(h, val);
+      var card = document.createElement("div");
+      card.className = "card";
+
+      var goalText = h.type === "limit"
+        ? "limite: " + h.limite + " " + h.unit + "/dia"
+        : "meta: " + h.goal + " " + h.unit + "/dia";
+
+      var top = document.createElement("div");
+      top.className = "card-top";
+      top.innerHTML =
+        '<div class="habit-icon">'+h.icon+'</div>'+
+        '<div class="habit-info"><div class="name">'+h.label+'</div><div class="goal">'+goalText+'</div></div>';
+
+      var checkBtn = document.createElement("div");
+      checkBtn.className = "check" + (done && h.type==="counter" ? " done" : "");
+      checkBtn.textContent = "✓";
+      if (h.type === "counter"){
+        checkBtn.addEventListener("click", function(){
+          var d = editDay(iso);
+          d[h.key] = done ? 0 : h.goal;
+          persistDays(); renderAll();
+        });
+      } else {
+        checkBtn.style.visibility = "hidden";
+      }
+      top.appendChild(checkBtn);
+      card.appendChild(top);
+
+      if (h.type === "counter"){
+        var pct = Math.min(100, Math.round((val / h.goal) * 100));
+        var progressRow = document.createElement("div");
+        progressRow.className = "progress-row";
+        progressRow.innerHTML =
+          '<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%"></div></div>'+
+          '<div class="value-label">'+fmtValue(h, val)+' / '+fmtValue(h, h.goal)+'</div>';
+        card.appendChild(progressRow);
+
+        var stepper = document.createElement("div");
+        stepper.className = "stepper";
+        var minus = document.createElement("button"); minus.textContent = "–";
+        var amt = document.createElement("div"); amt.className = "amount"; amt.textContent = fmtValue(h, val);
+        var plus = document.createElement("button"); plus.textContent = "+";
+        minus.addEventListener("click", function(){
+          var d = editDay(iso);
+          d[h.key] = Math.max(0, Math.round((val - h.step)*10)/10);
+          persistDays(); renderAll();
+        });
+        plus.addEventListener("click", function(){
+          var d = editDay(iso);
+          d[h.key] = Math.round((val + h.step)*10)/10;
+          persistDays(); renderAll();
+        });
+        stepper.appendChild(minus); stepper.appendChild(amt); stepper.appendChild(plus);
+        card.appendChild(stepper);
+      } else {
+        var over = val > h.limite;
+        var pctL = Math.min(100, Math.round((val / h.limite) * 100));
+        var progressRow2 = document.createElement("div");
+        progressRow2.className = "progress-row";
+        progressRow2.innerHTML =
+          '<div class="bar-track"><div class="bar-fill '+(over?"limit-over":"limit-ok")+'" style="width:'+pctL+'%"></div></div>'+
+          '<div class="value-label">'+val+' / '+h.limite+' min</div>';
+        card.appendChild(progressRow2);
+
+        var stepper2 = document.createElement("div");
+        stepper2.className = "stepper";
+        var minus2 = document.createElement("button"); minus2.textContent = "–";
+        var amt2 = document.createElement("div"); amt2.className = "amount"; amt2.textContent = val + " min";
+        var plus2 = document.createElement("button"); plus2.textContent = "+";
+        minus2.addEventListener("click", function(){
+          var d = editDay(iso);
+          d[h.key] = Math.max(0, val - h.step);
+          persistDays(); renderAll();
+        });
+        plus2.addEventListener("click", function(){
+          var d = editDay(iso);
+          d[h.key] = val + h.step;
+          persistDays(); renderAll();
+        });
+        stepper2.appendChild(minus2); stepper2.appendChild(amt2); stepper2.appendChild(plus2);
+        card.appendChild(stepper2);
+
+        var chip = document.createElement("div");
+        chip.className = "chip " + (over ? "over" : "ok");
+        chip.innerHTML = '<span class="dot"></span>' + (over ? "acima do limite" : "dentro do limite");
+        card.appendChild(chip);
+      }
+
+      habitCardsEl.appendChild(card);
+    });
+
+    noteField.value = day.note || "";
+  }
+
+  noteField.addEventListener("input", function(){
+    var iso = isoDate(currentDate);
+    editDay(iso).note = noteField.value;
+    persistDays();
+  });
+
+  document.getElementById("prevDay").addEventListener("click", function(){
+    currentDate.setDate(currentDate.getDate()-1);
+    renderAll();
+  });
+  document.getElementById("nextDay").addEventListener("click", function(){
+    if (isoDate(currentDate) === isoDate(TODAY)) return;
+    currentDate.setDate(currentDate.getDate()+1);
+    renderAll();
+  });
+
+  // ---------------- Evolução ----------------
+  var weekChartEl = document.getElementById("weekChart");
+  var heroNumEl = document.getElementById("heroNum");
+  var statGridEl = document.getElementById("statGrid");
+  var evoStatGridEl = document.getElementById("evoStatGrid");
+  var weekTableBody = document.querySelector("#weekTable tbody");
+  var monthLabelEl = document.getElementById("monthLabel");
+  var heatDowEl = document.getElementById("heatDow");
+  var heatGridEl = document.getElementById("heatGrid");
+
+  function last7Dates(){
+    var arr = [];
+    for (var i=6;i>=0;i--){ var d = new Date(TODAY); d.setDate(d.getDate()-i); arr.push(d); }
+    return arr;
+  }
+
+  function renderWeek(habits){
+    var dates = last7Dates();
+    var fullCount = 0;
+    weekChartEl.innerHTML = "";
+    weekTableBody.innerHTML = "";
+    var sums = {agua:0, estudo:0, trabalho:0, exercicio:0, redes:0};
+
+    dates.forEach(function(d){
+      var iso = isoDate(d);
+      var day = peekDay(iso);
+      var pct = pctDone(habits, iso);
+      if (fullyDone(habits, iso)) fullCount++;
+      habits.forEach(function(h){ sums[h.key] += day[h.key]; });
+
+      var isToday = iso === isoDate(TODAY);
+      var col = document.createElement("div");
+      col.className = "barcol";
+      col.innerHTML =
+        '<div class="capval">'+pct+'%</div>'+
+        '<div class="col'+(isToday?" today":"")+'" style="height:'+Math.max(pct,2)+'%"></div>'+
+        '<div class="daylabel'+(isToday?" today":"")+'">'+WEEKDAYS[d.getDay()]+'</div>';
+      weekChartEl.appendChild(col);
+
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td>'+WEEKDAYS[d.getDay()]+' '+d.getDate()+'/'+(d.getMonth()+1)+'</td>'+
+        '<td>'+day.agua+'</td><td>'+day.estudo+'</td><td>'+day.trabalho+'</td>'+
+        '<td>'+day.exercicio+'</td><td>'+day.redes+'</td><td>'+pct+'%</td>';
+      weekTableBody.appendChild(tr);
+    });
+
+    heroNumEl.textContent = fullCount + "/7";
+
+    statGridEl.innerHTML = "";
+    habits.forEach(function(h){
+      var avg = sums[h.key] / 7;
+      var target = h.type === "limit" ? h.limite : h.goal;
+      var pct = Math.min(100, Math.round((avg/target)*100));
+      var tile = document.createElement("div");
+      tile.className = "stat-tile";
+      tile.innerHTML =
+        '<div class="label">'+h.icon+' '+h.label+'</div>'+
+        '<div class="val">'+(h.unit==="h" ? (Math.round(avg*10)/10) : Math.round(avg))+' '+h.unit+'</div>'+
+        '<div class="meter-track"><div class="meter-fill" style="width:'+pct+'%"></div></div>';
+      statGridEl.appendChild(tile);
+    });
+  }
+
+  function renderEvoStats(habits){
+    var best = computeBestStreak(habits);
+    var totalDays = Object.keys(daysData).length;
+    evoStatGridEl.innerHTML = "";
+    [
+      {label:"Melhor sequência", val: best + (best===1?" dia":" dias")},
+      {label:"Dias registrados no total", val: String(totalDays)}
+    ].forEach(function(s){
+      var tile = document.createElement("div");
+      tile.className = "stat-tile";
+      tile.innerHTML = '<div class="label">'+s.label+'</div><div class="val">'+s.val+'</div>';
+      evoStatGridEl.appendChild(tile);
+    });
+  }
+
+  function renderHeatmap(habits){
+    var mName = MONTHS[calMonth.getMonth()];
+    monthLabelEl.textContent = mName.charAt(0).toUpperCase() + mName.slice(1) + " de " + calMonth.getFullYear();
+    heatDowEl.innerHTML = "";
+    WEEKDAYS.forEach(function(w){
+      var el = document.createElement("div");
+      el.className = "heat-dow";
+      el.textContent = w[0];
+      heatDowEl.appendChild(el);
+    });
+
+    heatGridEl.innerHTML = "";
+    var firstOfMonth = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
+    var daysInMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 0).getDate();
+    var leadBlanks = firstOfMonth.getDay();
+
+    for (var i=0;i<leadBlanks;i++){
+      var blank = document.createElement("div");
+      blank.className = "heat-cell empty";
+      heatGridEl.appendChild(blank);
+    }
+    for (var day=1; day<=daysInMonth; day++){
+      var d = new Date(calMonth.getFullYear(), calMonth.getMonth(), day);
+      var iso = isoDate(d);
+      var cell = document.createElement("div");
+      var isFuture = d > TODAY;
+      cell.className = "heat-cell" + (isFuture ? " future" : "");
+      if (hasEntry(iso) && !isFuture){
+        var pct = pctDone(habits, iso);
+        var idx = Math.min(4, Math.floor(pct/20));
+        cell.style.background = RAMP_VARS[idx];
+        cell.style.borderColor = "transparent";
+        cell.style.color = "rgba(0,0,0,0.6)";
+        cell.textContent = day;
+      } else {
+        cell.textContent = day;
+        cell.style.color = "var(--text-muted)";
+      }
+      (function(isoCap){
+        cell.addEventListener("click", function(){
+          currentDate = new Date(isoCap + "T00:00:00");
+          document.getElementById("tabHojeBtn").click();
+        });
+      })(iso);
+      heatGridEl.appendChild(cell);
+    }
+  }
+
+  document.getElementById("prevMonth").addEventListener("click", function(){
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth()-1, 1);
+    renderHeatmap(buildHabits());
+  });
+  document.getElementById("nextMonth").addEventListener("click", function(){
+    var next = new Date(calMonth.getFullYear(), calMonth.getMonth()+1, 1);
+    if (next > TODAY && next.getMonth() !== TODAY.getMonth()) return;
+    calMonth = next;
+    renderHeatmap(buildHabits());
+  });
+
+  function renderEvo(){
+    var habits = buildHabits();
+    renderWeek(habits);
+    renderEvoStats(habits);
+    renderHeatmap(habits);
+  }
+
+  function renderStreak(){
+    streakBadge.textContent = "🔥 " + computeStreak(buildHabits()) + " dias";
+  }
+
+  // ---------------- Ajustes ----------------
+  var settingsCardsEl = document.getElementById("settingsCards");
+
+  function renderAjustes(){
+    settingsCardsEl.innerHTML = "";
+    HABITS_STATIC.forEach(function(h){
+      var s = settings[h.key];
+      var card = document.createElement("div");
+      card.className = "settings-card";
+
+      var row = document.createElement("div");
+      row.className = "settings-row";
+      var isLimit = h.type === "limit";
+      var currentGoal = isLimit ? s.limite : (h.key === "agua" ? (s.goal != null ? s.goal : (s.unit==="ml"?2000:8)) : s.goal);
+      row.innerHTML =
+        '<div class="habit-icon">'+h.icon+'</div>'+
+        '<div class="habit-info"><div class="name">'+h.label+'</div>'+
+        '<div class="goal">'+(isLimit?"limite diário":"meta diária")+'</div></div>';
+      var input = document.createElement("input");
+      input.type = "number"; input.min = "0"; input.step = (h.key==="agua" && s.unit==="ml") ? "50" : (h.key==="trabalho"?"0.5":"1");
+      input.value = currentGoal;
+      row.appendChild(input);
+      card.appendChild(row);
+
+      input.addEventListener("change", function(){
+        var v = parseFloat(input.value);
+        if (isNaN(v) || v < 0) v = 0;
+        if (isLimit) settings[h.key].limite = v; else settings[h.key].goal = v;
+        persistSettings(); renderAll();
+      });
+
+      if (h.key === "agua"){
+        var toggle = document.createElement("div");
+        toggle.className = "unit-toggle";
+        ["copos","ml"].forEach(function(u){
+          var b = document.createElement("button");
+          b.textContent = u === "copos" ? "Copos" : "Mililitros (ml)";
+          if ((s.unit||"copos") === u) b.classList.add("active");
+          b.addEventListener("click", function(){
+            settings.agua.unit = u;
+            settings.agua.goal = u === "ml" ? 2000 : 8;
+            persistSettings(); renderAll();
+          });
+          toggle.appendChild(b);
+        });
+        card.appendChild(toggle);
+      }
+
+      settingsCardsEl.appendChild(card);
+    });
+  }
+
+  // ---------------- tabs ----------------
+  var tabHojeBtn = document.getElementById("tabHojeBtn");
+  var tabEvoBtn = document.getElementById("tabEvoBtn");
+  var tabAjustesBtn = document.getElementById("tabAjustesBtn");
+  var viewHoje = document.getElementById("viewHoje");
+  var viewEvo = document.getElementById("viewEvo");
+  var viewAjustes = document.getElementById("viewAjustes");
+  var tabs = [
+    [tabHojeBtn, viewHoje],
+    [tabEvoBtn, viewEvo],
+    [tabAjustesBtn, viewAjustes]
+  ];
+  function activateTab(which){
+    tabs.forEach(function(pair){
+      var isActive = pair[0] === which;
+      pair[0].classList.toggle("active", isActive);
+      pair[1].classList.toggle("active", isActive);
+    });
+  }
+  tabHojeBtn.addEventListener("click", function(){ activateTab(tabHojeBtn); });
+  tabEvoBtn.addEventListener("click", function(){ activateTab(tabEvoBtn); renderEvo(); });
+  tabAjustesBtn.addEventListener("click", function(){ activateTab(tabAjustesBtn); renderAjustes(); });
+
+  function renderAll(){
+    renderDateBar();
+    renderHabitCards();
+    if (viewEvo.classList.contains("active")) renderEvo();
+    if (viewAjustes.classList.contains("active")) renderAjustes();
+    renderStreak();
+  }
+
+  // ---------------- boot: load from IndexedDB (with localStorage migration) ----------------
+  function migrateLegacyIfNeeded(){
+    try{
+      var raw = localStorage.getItem(LEGACY_LS_KEY);
+      if (raw){
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.days) return parsed.days;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  Promise.all([idbGet("days"), idbGet("settings")]).then(function(res){
+    daysData = res[0] || migrateLegacyIfNeeded() || {};
+    settings = res[1] || defaultSettings();
+    persistDays(); persistSettings();
+    renderAll();
+  }).catch(function(){
+    // fallback if IndexedDB unavailable: in-memory only for this session
+    daysData = migrateLegacyIfNeeded() || {};
+    settings = defaultSettings();
+    renderAll();
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
