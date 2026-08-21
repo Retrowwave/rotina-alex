@@ -325,9 +325,16 @@
     </div>
 
     <div class="chart-card">
-      <h3>Evolução do índice</h3>
-      <div class="evo-select-row">
-        <div class="cat-scroll-row" id="indexCatRow" style="margin:0;flex:1;"></div>
+      <h3>Filtrar gráficos por</h3>
+      <div class="cat-scroll-row" id="indexCatRow" style="margin-bottom:8px;"></div>
+      <select id="growthItemSelect" class="newhabit-select" style="margin-top:0;">
+        <option value="">Todas as metas</option>
+      </select>
+    </div>
+
+    <div class="chart-card">
+      <div class="evo-select-row" style="margin-bottom:0;">
+        <h3 style="margin:0;flex:1;">Evolução do índice</h3>
         <div class="range-toggle" id="indexRangeToggle">
           <button type="button" data-range="7">7d</button>
           <button type="button" data-range="30" class="active">30d</button>
@@ -470,6 +477,8 @@
         </select>
       </div>
       <input type="text" id="itemUnitCustom" placeholder="digite a unidade" class="newhabit-input" style="display:none;">
+      <div class="field-label">Quanto soma a cada toque no + / –</div>
+      <input type="number" id="itemStep" placeholder="Ex: 500 (se a unidade for ml)" min="0" step="any" class="newhabit-input" style="margin-top:0;">
     </div>
 
     <div class="field-label">Agendamento</div>
@@ -908,15 +917,22 @@
     return true;
   }
 
+  // filter shared by all Crescimento charts: {kind:"all"} | {kind:"category", id} | {kind:"item", id}
+  function itemMatchesFilter(item, filter){
+    if (!filter || filter.kind === "all") return true;
+    if (filter.kind === "category") return (item.categoryIds||[]).indexOf(filter.id) !== -1;
+    if (filter.kind === "item") return item.id === filter.id;
+    return true;
+  }
+
   // ================= growth index (chart "tipo cotação") =================
   var START_INDEX = 1000;
   var POINT_VALUE = 12;
 
-  function computeGrowthSeries(categoryId){
+  function computeGrowthSeries(filter){
     var items = appData.items.filter(function(it){
       if (it.archived) return false;
-      if (categoryId && (it.categoryIds||[]).indexOf(categoryId)===-1) return false;
-      return true;
+      return itemMatchesFilter(it, filter);
     });
     if (!items.length) return [];
 
@@ -979,9 +995,10 @@
     return series;
   }
 
-  // % of "in play" items done on a given date (dates-mode due items + all frequency items)
-  function dayPct(iso, dateObj){
-    var items = appData.items.filter(function(it){ return itemActiveOn(it, dateObj); });
+  // % of "in play" items done on a given date (dates-mode due items + all frequency items),
+  // optionally restricted to a category or a single item via filter
+  function dayPct(iso, dateObj, filter){
+    var items = appData.items.filter(function(it){ return itemActiveOn(it, dateObj) && itemMatchesFilter(it, filter); });
     var inPlay = [];
     items.forEach(function(it){
       if (it.scheduleMode === "dates"){ if (isDueOn(it, dateObj)) inPlay.push(it); }
@@ -992,11 +1009,12 @@
     inPlay.forEach(function(it){ if (entryDone(it, getEntry(iso, it.id))) done++; });
     return Math.round((done/inPlay.length)*100);
   }
-  function dayFullyDone(iso, dateObj){
-    var p = dayPct(iso, dateObj);
+  function dayFullyDone(iso, dateObj, filter){
+    var p = dayPct(iso, dateObj, filter);
     return p !== null && p === 100;
   }
 
+  // header streak badge: always global (unfiltered), shown regardless of which tab/filter is active
   function computeStreak(){
     var streak = 0;
     var d = new Date(TODAY);
@@ -1008,7 +1026,7 @@
     }
     return streak;
   }
-  function computeBestStreak(){
+  function computeBestStreak(filter){
     var d = new Date(TODAY);
     var minTs = appData.items.reduce(function(m,it){ return Math.min(m, it.created_at||Date.now()); }, Date.now());
     var start = new Date(minTs); start.setHours(0,0,0,0);
@@ -1016,7 +1034,7 @@
     var cursor = new Date(start);
     while (cursor <= TODAY){
       var iso = isoDate(cursor);
-      if (dayFullyDone(iso, cursor)){ cur++; if (cur>best) best=cur; }
+      if (dayFullyDone(iso, cursor, filter)){ cur++; if (cur>best) best=cur; }
       else cur = 0;
       cursor.setDate(cursor.getDate()+1);
     }
@@ -1359,35 +1377,67 @@
   var avgSectionLabelEl = document.getElementById("avgSectionLabel");
   var avgRangeToggle = document.getElementById("avgRangeToggle");
 
-  var indexSelectedCat = null; // null = geral
+  // shared by index chart, % batidas por dia, heatmap and "melhor sequência"
+  var growthFilter = {kind:"all", id:null};
+  var growthItemSelectEl = document.getElementById("growthItemSelect");
   var indexRangeDays = 30;
   var avgRangeDays = 7;
   var AVG_RANGE_LABELS = {7:"Médias da semana", 30:"Médias do mês", 365:"Médias do ano"};
 
+  function setGrowthFilter(filter){
+    growthFilter = filter;
+    renderIndexCatRow();
+    renderGrowthItemSelect();
+    renderIndexChart();
+    renderWeek();
+    renderHeatmap();
+    renderEvoStats();
+  }
+
   function renderIndexCatRow(){
     indexCatRowEl.innerHTML = "";
     var geral = document.createElement("div");
-    geral.className = "tag-chip selectable" + (indexSelectedCat===null ? " selected" : "");
+    geral.className = "tag-chip selectable" + (growthFilter.kind==="all" ? " selected" : "");
     geral.textContent = "Geral";
-    geral.addEventListener("click", function(){ indexSelectedCat = null; renderIndexChart(); });
+    geral.addEventListener("click", function(){ setGrowthFilter({kind:"all", id:null}); });
     indexCatRowEl.appendChild(geral);
     appData.categories.forEach(function(c){
       var chip = document.createElement("div");
-      chip.className = "tag-chip selectable" + (indexSelectedCat===c.id ? " selected" : "");
+      chip.className = "tag-chip selectable" + ((growthFilter.kind==="category" && growthFilter.id===c.id) ? " selected" : "");
       chip.style.background = c.color + "29";
       chip.style.color = c.color;
       chip.textContent = (c.icon ? c.icon+" " : "") + c.name;
-      chip.addEventListener("click", function(){ indexSelectedCat = c.id; renderIndexChart(); });
+      chip.addEventListener("click", function(){ setGrowthFilter({kind:"category", id:c.id}); });
       indexCatRowEl.appendChild(chip);
     });
   }
 
+  function renderGrowthItemSelect(){
+    growthItemSelectEl.innerHTML = '<option value="">Todas as metas</option>';
+    appData.items
+      .filter(function(it){ return !it.archived; })
+      .slice()
+      .sort(function(a,b){ return a.title.localeCompare(b.title); })
+      .forEach(function(it){
+        var opt = document.createElement("option");
+        opt.value = it.id;
+        opt.textContent = it.icon + " " + it.title;
+        growthItemSelectEl.appendChild(opt);
+      });
+    var stillExists = growthFilter.kind==="item" && appData.items.some(function(it){ return it.id===growthFilter.id; });
+    growthItemSelectEl.value = stillExists ? growthFilter.id : "";
+  }
+  growthItemSelectEl.addEventListener("change", function(){
+    var val = growthItemSelectEl.value;
+    setGrowthFilter(val ? {kind:"item", id:val} : {kind:"all", id:null});
+  });
+
   function renderIndexChart(){
-    var full = computeGrowthSeries(indexSelectedCat);
+    var full = computeGrowthSeries(growthFilter);
     if (!full.length){
       indexNumEl.textContent = String(START_INDEX);
       indexDeltaEl.className = "delta flat";
-      indexDeltaEl.textContent = "sem itens ativos nessa categoria";
+      indexDeltaEl.textContent = "sem itens ativos nesse filtro";
       indexLineChart.innerHTML = "";
       return;
     }
@@ -1440,7 +1490,7 @@
     weekChartEl.innerHTML = "";
     dates.forEach(function(d){
       var iso = isoDate(d);
-      var pct = dayPct(iso, d);
+      var pct = dayPct(iso, d, growthFilter);
       var isToday = iso === isoDate(TODAY);
       var col = document.createElement("div");
       col.className = "barcol";
@@ -1479,7 +1529,7 @@
       var cell = document.createElement("div");
       var isFuture = d > TODAY;
       cell.className = "heat-cell" + (isFuture ? " future" : "");
-      var pct = isFuture ? null : dayPct(iso, d);
+      var pct = isFuture ? null : dayPct(iso, d, growthFilter);
       if (pct !== null){
         var idx = Math.min(4, Math.floor(pct/20));
         cell.style.background = RAMP_VARS[idx];
@@ -1512,7 +1562,7 @@
   });
 
   function renderEvoStats(){
-    var best = computeBestStreak();
+    var best = computeBestStreak(growthFilter);
     var totalDays = Object.keys(appData.days).length;
     evoStatGridEl.innerHTML = "";
     [
@@ -1570,6 +1620,7 @@
 
   function renderCresc(){
     renderIndexCatRow();
+    renderGrowthItemSelect();
     renderIndexChart();
     renderWeek();
     renderEvoStats();
@@ -1795,6 +1846,7 @@
   var itemGoalInput = document.getElementById("itemGoal");
   var itemUnitSelect = document.getElementById("itemUnit");
   var itemUnitCustom = document.getElementById("itemUnitCustom");
+  var itemStepInput = document.getElementById("itemStep");
   var itemScheduleModeBtns = document.getElementById("itemScheduleModeBtns");
   var itemDatesFields = document.getElementById("itemDatesFields");
   var itemFreqFields = document.getElementById("itemFreqFields");
@@ -1851,6 +1903,7 @@
   });
   itemUnitSelect.addEventListener("change", function(){
     itemUnitCustom.style.display = itemUnitSelect.value === "custom" ? "block" : "none";
+    if (itemUnitSelect.value !== "custom") itemStepInput.value = unitStep(itemUnitSelect.value);
   });
 
   function setScheduleMode(mode){
@@ -1925,6 +1978,7 @@
     itemUnitSelect.value = isKnownUnit || !item ? (isKnownUnit ? unit : "custom") : "custom";
     itemUnitCustom.style.display = (item && !isKnownUnit) ? "block" : "none";
     itemUnitCustom.value = (item && !isKnownUnit) ? unit : "";
+    itemStepInput.value = item && item.kind==="counter" ? item.step : unitStep(unit);
 
     setScheduleMode(modalScheduleMode);
 
@@ -1994,7 +2048,8 @@
     if (modalKind === "counter"){
       var unit = itemUnitSelect.value === "custom" ? (itemUnitCustom.value.trim() || "un") : itemUnitSelect.value;
       fields.unit = unit;
-      fields.step = unitStep(unit);
+      var customStep = parseFloat(itemStepInput.value);
+      fields.step = (!isNaN(customStep) && customStep > 0) ? customStep : unitStep(unit);
       fields.goal = parseFloat(itemGoalInput.value) || 0;
       fields.goalMode = modalGoalMode;
     }
